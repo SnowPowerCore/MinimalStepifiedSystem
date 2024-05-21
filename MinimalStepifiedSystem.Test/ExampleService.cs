@@ -1,4 +1,5 @@
-﻿using MinimalStepifiedSystem.Attributes;
+﻿using Microsoft.Extensions.DependencyInjection;
+using MinimalStepifiedSystem.Attributes;
 using MinimalStepifiedSystem.Test.Context;
 using MinimalStepifiedSystem.Test.Delegates;
 using MinimalStepifiedSystem.Test.Interfaces;
@@ -22,8 +23,8 @@ public class ExampleService : IExampleService
     ])]
     protected TestDelegate AnotherExecute { get; }
 
-    [ServiceProviderSupplier]
-    public ExampleService(IServiceProvider _) { }
+    [ServiceScopeFactorySupplier]
+    public ExampleService(IServiceScopeFactory _) { }
 
     public async Task ExecuteAsync()
     {
