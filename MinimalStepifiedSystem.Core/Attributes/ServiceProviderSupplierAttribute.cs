@@ -2,6 +2,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using MinimalStepifiedSystem.Interfaces;
 using System.Diagnostics.CodeAnalysis;
+using System.Linq.Expressions;
 using System.Reflection;
 
 namespace MinimalStepifiedSystem.Attributes;
@@ -12,7 +13,11 @@ namespace MinimalStepifiedSystem.Attributes;
 [AttributeUsage(AttributeTargets.Constructor, AllowMultiple = false)]
 public class ServiceProviderSupplierAttribute : Attribute, IServiceProviderSupplier
 {
-    private FieldInfo? _serviceProviderDisposedField;
+    private const string DisposedPropertyName = "Disposed";
+    private const string GlobalScopeMessage = "Setting the global service scope factory.";
+    private const string InstanceIdentifier = "i";
+
+    private Func<object, bool> _getIsDisposed;
 
     [NotNull]
 #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
@@ -27,11 +32,11 @@ public class ServiceProviderSupplierAttribute : Attribute, IServiceProviderSuppl
         if (ServiceProvider is default(IServiceProvider))
         {
             SetServiceProvider(serviceProvider);
-            _serviceProviderDisposedField = ServiceProvider!.GetType().GetField("_disposed", BindingFlags.NonPublic | BindingFlags.Instance);
+            _getIsDisposed = GenerateGetterLambda(ServiceProvider!.GetType().GetProperty(DisposedPropertyName, BindingFlags.NonPublic | BindingFlags.Instance));
             return;
         }
 
-        if ((bool)(_serviceProviderDisposedField?.GetValue(ServiceProvider) ?? true))
+        if (_getIsDisposed(ServiceProvider))
         {
             SetServiceProvider(serviceProvider);
         }
@@ -39,7 +44,19 @@ public class ServiceProviderSupplierAttribute : Attribute, IServiceProviderSuppl
 
     private void SetServiceProvider(IServiceProvider serviceProvider)
     {
-        Console.WriteLine("Setting the global service scope factory.");
+        Console.WriteLine(GlobalScopeMessage);
         ServiceProvider = serviceProvider.CreateScope().ServiceProvider;
+    }
+
+    private static Func<object, bool> GenerateGetterLambda(PropertyInfo property)
+    {
+        // Define our instance parameter, which will be the input of the Func
+        var objParameterExpr = Expression.Parameter(typeof(object), InstanceIdentifier);
+        // 1. Cast the instance to the correct type
+        var instanceExpr = Expression.TypeAs(objParameterExpr, property.DeclaringType);
+        // 2. Call the getter and retrieve the value of the property
+        var propertyExpr = Expression.Property(instanceExpr, property);
+        // Create a lambda expression of the latest call & compile it
+        return Expression.Lambda<Func<object, bool>>(propertyExpr, objParameterExpr).Compile();
     }
 }
