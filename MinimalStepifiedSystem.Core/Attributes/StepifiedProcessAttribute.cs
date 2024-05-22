@@ -16,6 +16,8 @@ public class StepifiedProcessAttribute : Attribute
 {
     private const string InvokeMethodName = "Invoke";
     private const string InvokeAsyncMethodName = "InvokeAsync";
+    private const string ContextIdentifier = "context";
+    private const string DelegateIdentifier = "delegate";
 
     private readonly DictionaryWithDefault<string, object> _cachedDelegates =
 #pragma warning disable CS8625 // Cannot convert null literal to non-nullable reference type.
@@ -88,8 +90,8 @@ public class StepifiedProcessAttribute : Attribute
             var methodInfo = step.GetType().GetMethod(InvokeAsyncMethodName);
 
             var instance = Expression.Constant(step, step.GetType());
-            var obj = Expression.Parameter(typeof(object), "context");
-            var del = Expression.Parameter(typeof(Delegate), "delegate");
+            var obj = Expression.Parameter(typeof(object), ContextIdentifier);
+            var del = Expression.Parameter(typeof(Delegate), DelegateIdentifier);
 
             var convert1 = Expression.Convert(obj, methodInfo!.GetParameters().First().ParameterType);
             var convert2 = Expression.Convert(del, methodInfo!.GetParameters().Last().ParameterType);
