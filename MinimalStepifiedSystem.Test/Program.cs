@@ -7,7 +7,7 @@ using MinimalStepifiedSystem.Test.Steps;
 
 var builder = Host.CreateApplicationBuilder(args);
 
-builder.Services.AddTransient<IExampleService>(sp => new ExampleService(sp.GetRequiredService<IServiceScopeFactory>()));
+builder.Services.AddTransient<IExampleService>(sp => new ExampleService(sp));
 builder.Services.AddTransient<TelemetryClient>();
 builder.Services.AddSingleton<TestInitStep>();
 builder.Services.AddSingleton<TestComplicatedStep>();

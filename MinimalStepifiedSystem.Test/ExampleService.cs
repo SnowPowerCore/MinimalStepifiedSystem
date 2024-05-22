@@ -23,8 +23,8 @@ public class ExampleService : IExampleService
     ])]
     protected TestDelegate AnotherExecute { get; }
 
-    [ServiceScopeFactorySupplier]
-    public ExampleService(IServiceScopeFactory _) { }
+    [ServiceProviderSupplier]
+    public ExampleService(IServiceProvider _) { }
 
     public async Task ExecuteAsync()
     {
