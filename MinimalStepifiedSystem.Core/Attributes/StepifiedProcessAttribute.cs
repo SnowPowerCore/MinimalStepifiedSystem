@@ -1,11 +1,11 @@
-﻿using System.Diagnostics.CodeAnalysis;
-using System.Linq.Expressions;
-using System.Reflection;
-using AspectInjector.Broker;
+﻿using AspectInjector.Broker;
 using Microsoft.Extensions.DependencyInjection;
 using MinimalStepifiedSystem.Base;
 using MinimalStepifiedSystem.Interfaces;
 using MinimalStepifiedSystem.Utils;
+using System.Diagnostics.CodeAnalysis;
+using System.Linq.Expressions;
+using System.Reflection;
 
 namespace MinimalStepifiedSystem.Attributes;
 
@@ -14,6 +14,9 @@ namespace MinimalStepifiedSystem.Attributes;
 [AttributeUsage(AttributeTargets.Property, AllowMultiple = false)]
 public class StepifiedProcessAttribute : Attribute
 {
+    private const string InvokeMethodName = "Invoke";
+    private const string InvokeAsyncMethodName = "InvokeAsync";
+
     private readonly DictionaryWithDefault<string, object> _cachedDelegates =
 #pragma warning disable CS8625 // Cannot convert null literal to non-nullable reference type.
         new(defaultValue: default);
@@ -21,7 +24,7 @@ public class StepifiedProcessAttribute : Attribute
 
     /// <summary>
     /// <para>• The order of types matters. They will be executed from top to bottom;</para>
-    /// <para>• There must be an <see cref="IServiceProvider"/> instance registered with the help of <see cref="ServiceScopeFactorySupplierAttribute"/>. This attribute should be applied inside of the target instance and to the constructor;</para>
+    /// <para>• There must be an <see cref="IServiceProvider"/> instance registered with the help of <see cref="ServiceProviderSupplierAttribute"/>. This attribute should be applied inside of the target instance and to the constructor;</para>
     /// <para>• You will need to implement <see cref="IStep{TDelegate, TContext}"/> interface for each of these types with the correct signature;</para>
     /// <para>• You will need to register these types in your container.</para>
     /// </summary>
@@ -41,16 +44,16 @@ public class StepifiedProcessAttribute : Attribute
             return cachedDelegate;
         }
 
-        var serviceProviderSupplier = (IServiceScopeFactorySupplier)targetClass;
+        var serviceProviderSupplier = (IServiceProviderSupplier)targetClass;
         var trigger = triggers.OfType<StepifiedProcessAttribute>().First();
-        var delegateMethod = target.GetMethod("Invoke");
+        var delegateMethod = target.GetMethod(InvokeMethodName);
         var contextParamType = delegateMethod!.GetParameters().FirstOrDefault()?.ParameterType;
 
         using var builder = new GenericStepifiedBuilder();
 
         foreach (var step in trigger.Steps)
         {
-            UseStep(builder, serviceProviderSupplier.ServiceScopeFactory, target, contextParamType!, step);
+            UseStep(builder, serviceProviderSupplier.ServiceProvider, target, contextParamType!, step);
         }
 
         var item = builder.Build();
@@ -59,7 +62,7 @@ public class StepifiedProcessAttribute : Attribute
         return resultDelegate;
 
         static GenericStepifiedBuilder UseStep(
-            GenericStepifiedBuilder stepifiedBuilder, IServiceScopeFactory serviceScopeFactory,
+            GenericStepifiedBuilder stepifiedBuilder, IServiceProvider serviceProvider,
             Type delegateType, Type contextType, Type stepType)
         {
             var stepInterface = typeof(IStep<,>);
@@ -69,8 +72,7 @@ public class StepifiedProcessAttribute : Attribute
                 return stepifiedBuilder.Use(next =>
                     (object context) =>
                     {
-                        using var scope = serviceScopeFactory.CreateScope();
-                        var step = scope.ServiceProvider.GetRequiredService(stepType)
+                        var step = serviceProvider.GetRequiredService(stepType)
                             ?? throw new InvalidOperationException(
                                 $"Couldn't get an instance of {stepType.FullName} from the container.");
                         var stepDelegate = GetStepDowncastedFunc(step);
@@ -83,7 +85,7 @@ public class StepifiedProcessAttribute : Attribute
 
         static Func<object, Delegate, Task> GetStepDowncastedFunc(object step)
         {
-            var methodInfo = step.GetType().GetMethod("InvokeAsync");
+            var methodInfo = step.GetType().GetMethod(InvokeAsyncMethodName);
 
             var instance = Expression.Constant(step, step.GetType());
             var obj = Expression.Parameter(typeof(object), "context");
