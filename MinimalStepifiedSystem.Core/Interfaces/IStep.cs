@@ -8,5 +8,5 @@
 public interface IStep<TDelegate, TContext> where TDelegate : Delegate
                                             where TContext : class
 {
-    Task InvokeAsync(TContext context, TDelegate next);
+    Task InvokeAsync(TContext context, TDelegate next, CancellationToken token = default);
 }

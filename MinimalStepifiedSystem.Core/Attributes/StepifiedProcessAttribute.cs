@@ -17,6 +17,7 @@ public class StepifiedProcessAttribute : Attribute
     private const string InvokeMethodName = "Invoke";
     private const string InvokeAsyncMethodName = "InvokeAsync";
     private const string ContextIdentifier = "context";
+    private const string CancellationTokenIdentifier = "token";
     private const string DelegateIdentifier = "delegate";
 
     private readonly DictionaryWithDefault<string, object> _cachedDelegates =
@@ -72,32 +73,35 @@ public class StepifiedProcessAttribute : Attribute
             if (stepGenericInterface.GetTypeInfo().IsAssignableFrom(stepType.GetTypeInfo()))
             {
                 return stepifiedBuilder.Use(next =>
-                    (object context) =>
+                    (object context, CancellationToken token = default) =>
                     {
                         var step = serviceProvider.GetRequiredService(stepType)
                             ?? throw new InvalidOperationException(
                                 $"Couldn't get an instance of {stepType.FullName} from the container.");
                         var stepDelegate = GetStepDowncastedFunc(step);
-                        return stepDelegate(context, Delegate.CreateDelegate(delegateType, next.Target, next.Method))!;
+                        return stepDelegate(context, token, Delegate.CreateDelegate(delegateType, next.Target, next.Method))!;
                     });
             }
 
             throw new InvalidOperationException($"Step should inherit IStep");
         }
 
-        static Func<object, Delegate, Task> GetStepDowncastedFunc(object step)
+        static Func<object, CancellationToken, Delegate, Task> GetStepDowncastedFunc(object step)
         {
-            var methodInfo = step.GetType().GetMethod(InvokeAsyncMethodName);
+            var stepType = step.GetType();
+            var methodInfo = stepType.GetMethod(InvokeAsyncMethodName);
 
-            var instance = Expression.Constant(step, step.GetType());
+            var instance = Expression.Constant(step, stepType);
             var obj = Expression.Parameter(typeof(object), ContextIdentifier);
+            var ct = Expression.Parameter(typeof(CancellationToken), CancellationTokenIdentifier);
             var del = Expression.Parameter(typeof(Delegate), DelegateIdentifier);
 
-            var convert1 = Expression.Convert(obj, methodInfo!.GetParameters().First().ParameterType);
-            var convert2 = Expression.Convert(del, methodInfo!.GetParameters().Last().ParameterType);
+            var parametersInfo = methodInfo!.GetParameters();
+            var convert1 = Expression.Convert(obj, parametersInfo.First().ParameterType);
+            var convert2 = Expression.Convert(del, parametersInfo.ElementAtOrDefault(parametersInfo.Length - 2).ParameterType);
 
-            var call = Expression.Call(instance, methodInfo, convert1, convert2);
-            return Expression.Lambda<Func<object, Delegate, Task>>(call, obj, del).Compile();
+            var call = Expression.Call(instance, methodInfo, convert1, convert2, ct);
+            return Expression.Lambda<Func<object, CancellationToken, Delegate, Task>>(call, obj, ct, del).Compile();
         }
 
         static string GetKey(string targetClassName, string memberName) =>

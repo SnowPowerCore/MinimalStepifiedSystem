@@ -1,5 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-using MinimalStepifiedSystem.Attributes;
+﻿using MinimalStepifiedSystem.Attributes;
 using MinimalStepifiedSystem.Test.Context;
 using MinimalStepifiedSystem.Test.Delegates;
 using MinimalStepifiedSystem.Test.Interfaces;
@@ -28,11 +27,13 @@ public class ExampleService : IExampleService
 
     public async Task ExecuteAsync()
     {
-        await Execute.Invoke(new TestContext { InitData = "Welcome!" });
+        using var cts = new CancellationTokenSource();
+        await Execute.Invoke(new TestContext { InitData = "Welcome!" }, cts.Token);
     }
 
     public async Task AnotherExecuteAsync()
     {
-        await AnotherExecute.Invoke(new TestContext());
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(1));
+        await AnotherExecute.Invoke(new TestContext(), cts.Token);
     }
 }

@@ -6,10 +6,17 @@ namespace MinimalStepifiedSystem.Test.Steps;
 
 public class TestInitStep : IStep<TestDelegate, TestContext>
 {
-    public Task InvokeAsync(TestContext context, TestDelegate next)
+    public async Task InvokeAsync(TestContext context, TestDelegate next, CancellationToken token = default)
     {
-        Console.WriteLine($"Stepified system has been initialized: {context.InitData}");
-        context.SetDataWith("Message", "Very Important Message");
-        return next(context);
+        try
+        {
+            Console.WriteLine($"Stepified system has been initialized: {context.InitData}");
+            context.SetDataWith("Message", "Very Important Message");
+            await next(context, token);
+        }
+        catch (TaskCanceledException e)
+        {
+            Console.WriteLine($"Handled a cancellation for {context.GetType().FullName}: {e.Message}");
+        }
     }
 }

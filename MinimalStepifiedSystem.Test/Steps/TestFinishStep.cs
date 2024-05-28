@@ -6,10 +6,10 @@ namespace MinimalStepifiedSystem.Test.Steps;
 
 public class TestFinishStep : IStep<TestDelegate, TestContext>
 {
-    public Task InvokeAsync(TestContext context, TestDelegate next)
+    public Task InvokeAsync(TestContext context, TestDelegate next, CancellationToken token = default)
     {
         var data = context.GetFromData<string>("Message");
         Console.WriteLine($"Stepified system has successfully ran: {data}");
-        return next(context);
+        return next(context, token);
     }
 }
