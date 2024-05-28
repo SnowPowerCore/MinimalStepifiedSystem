@@ -12,7 +12,17 @@ internal sealed class GenericStepifiedBuilder : IDisposable
 
     public Delegate Build()
     {
-        Delegate e = (object context) => Task.CompletedTask;
+        Delegate e = (object context, CancellationToken token = default) =>
+        {
+            if (token != CancellationToken.None && token.IsCancellationRequested)
+            {
+                Console.WriteLine(
+                    $"Operation was canceled for the {context.GetType().FullName}. "
+                    + "Please check steps which operate this context.");
+                return Task.FromCanceled(token);
+            }
+            return Task.CompletedTask;
+        };
 
         for (var c = _components.Count - 1; c >= 0; c--)
             e = _components[c](e);

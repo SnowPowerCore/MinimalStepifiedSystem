@@ -17,7 +17,7 @@ public class ServiceProviderSupplierAttribute : Attribute, IServiceProviderSuppl
     private const string GlobalScopeMessage = "Setting the global service scope factory.";
     private const string InstanceIdentifier = "i";
 
-    private Func<object, bool> _getIsDisposed;
+    private Func<object, bool>? _getIsDisposed;
 
     [NotNull]
 #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
@@ -36,7 +36,7 @@ public class ServiceProviderSupplierAttribute : Attribute, IServiceProviderSuppl
             return;
         }
 
-        if (_getIsDisposed(ServiceProvider))
+        if (_getIsDisposed!(ServiceProvider))
         {
             SetServiceProvider(serviceProvider);
         }
