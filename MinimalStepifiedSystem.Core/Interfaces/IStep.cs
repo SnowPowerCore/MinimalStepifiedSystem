@@ -5,8 +5,9 @@
 /// </summary>
 /// <typeparam name="TDelegate">Controllable call to the next delegate.</typeparam>
 /// <typeparam name="TContext">Context object that may contain necessary data between different steps.</typeparam>
-public interface IStep<TDelegate, TContext> where TDelegate : Delegate
-                                            where TContext : class
+public interface IStep<TDelegate, TContext, TReturn> where TDelegate : Delegate
+                                                     where TContext : class
+                                                     where TReturn : class
 {
-    Task InvokeAsync(TContext context, TDelegate next, CancellationToken token = default);
+    Task<TReturn> InvokeAsync(TContext context, TDelegate next, CancellationToken token = default);
 }
