@@ -2,4 +2,4 @@
 
 namespace MinimalStepifiedSystem.Test.Delegates;
 
-public delegate Task TestDelegate(TestContext context, CancellationToken token = default);
+public delegate Task<TestContext> TestDelegate(TestContext context, CancellationToken token = default);
