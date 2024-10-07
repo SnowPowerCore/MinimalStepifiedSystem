@@ -27,18 +27,18 @@ public class ServiceProviderSupplierAttribute : Attribute, IServiceProviderSuppl
     [Advice(Kind.After)]
     public void Setup([Argument(Source.Arguments)] object[] args)
     {
-        var serviceProvider = (IServiceProvider)args.FirstOrDefault(x => x is IServiceProvider);
+        var serviceProvider = (IServiceProvider)args.FirstOrDefault(x => x is IServiceProvider)!;
 
         if (ServiceProvider is default(IServiceProvider))
         {
-            SetServiceProvider(serviceProvider);
-            _getIsDisposed = GenerateGetterLambda(ServiceProvider!.GetType().GetProperty(DisposedPropertyName, BindingFlags.NonPublic | BindingFlags.Instance));
+            SetServiceProvider(serviceProvider!);
+            _getIsDisposed = GenerateGetterLambda(ServiceProvider!.GetType().GetProperty(DisposedPropertyName, BindingFlags.NonPublic | BindingFlags.Instance)!);
             return;
         }
 
         if (_getIsDisposed!(ServiceProvider))
         {
-            SetServiceProvider(serviceProvider);
+            SetServiceProvider(serviceProvider!);
         }
     }
 
@@ -53,7 +53,7 @@ public class ServiceProviderSupplierAttribute : Attribute, IServiceProviderSuppl
         // Define our instance parameter, which will be the input of the Func
         var objParameterExpr = Expression.Parameter(typeof(object), InstanceIdentifier);
         // 1. Cast the instance to the correct type
-        var instanceExpr = Expression.TypeAs(objParameterExpr, property.DeclaringType);
+        var instanceExpr = Expression.TypeAs(objParameterExpr, property.DeclaringType!);
         // 2. Call the getter and retrieve the value of the property
         var propertyExpr = Expression.Property(instanceExpr, property);
         // Create a lambda expression of the latest call & compile it

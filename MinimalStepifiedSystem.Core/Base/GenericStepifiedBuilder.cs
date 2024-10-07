@@ -12,7 +12,7 @@ internal sealed class GenericStepifiedBuilder : IDisposable
 
     public Delegate Build()
     {
-        Delegate e = (Func<object, CancellationToken, Task<object>>)((object context, CancellationToken token = default) =>
+        Delegate e = (Func<object, CancellationToken, Task<object>>)(static (object context, CancellationToken token = default) =>
         {
             if (token != CancellationToken.None && token.IsCancellationRequested)
             {
