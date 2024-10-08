@@ -30,7 +30,7 @@ public class StepifiedProcessAttribute : Attribute
     /// <summary>
     /// <para>• The order of types matters. They will be executed from top to bottom;</para>
     /// <para>• There must be an <see cref="IServiceProvider"/> instance registered with the help of <see cref="ServiceProviderSupplierAttribute"/>. This attribute should be applied inside of the target instance and to the constructor;</para>
-    /// <para>• You will need to implement <see cref="IStep{TDelegate, TContext}"/> interface for each of these types with the correct signature;</para>
+    /// <para>• You will need to implement <see cref="IStep{TDelegate, TContext, TReturn}"/> interface for each of these types with the correct signature;</para>
     /// <para>• You will need to register these types in your container.</para>
     /// </summary>
     [NotNull]
