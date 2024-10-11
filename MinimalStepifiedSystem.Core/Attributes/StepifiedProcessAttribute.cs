@@ -4,7 +4,6 @@ using MinimalStepifiedSystem.Base;
 using MinimalStepifiedSystem.Interfaces;
 using MinimalStepifiedSystem.Utils;
 using System.Diagnostics.CodeAnalysis;
-using System.Linq.Expressions;
 using System.Reflection;
 
 namespace MinimalStepifiedSystem.Attributes;
@@ -21,8 +20,9 @@ public class StepifiedProcessAttribute : Attribute
     private const string DelegateIdentifier = "delegate";
 
     private MethodInvoker? _convertFuncMethodInvoker;
+    private MethodInvoker? _convertFuncObjMethodInvoker;
 
-    private readonly DictionaryWithDefault<string, object> _cachedDelegates =
+    private readonly DictionaryWithDefault<string, Delegate> _cachedDelegates =
 #pragma warning disable CS8625 // Cannot convert null literal to non-nullable reference type.
         new(defaultValue: default);
 #pragma warning restore CS8625 // Cannot convert null literal to non-nullable reference type.
@@ -52,20 +52,26 @@ public class StepifiedProcessAttribute : Attribute
         var serviceProviderSupplier = (IServiceProviderSupplier)targetClass;
         var trigger = triggers.OfType<StepifiedProcessAttribute>().First();
         var delegateMethod = target.GetMethod(InvokeMethodName);
-        var contextParamType = delegateMethod!.GetParameters().FirstOrDefault()?.ParameterType;
-        var returnParamType = delegateMethod!.ReturnParameter.ParameterType.GetGenericArguments().FirstOrDefault();
+        var contextParamType = delegateMethod!.GetParameters().First()?.ParameterType;
+        var returnParamType = delegateMethod!.ReturnParameter.ParameterType.GetGenericArguments().First();
 
         using var builder = new GenericStepifiedBuilder();
 
+        _convertFuncObjMethodInvoker ??= MethodInvoker.Create(typeof(Core.Extensions.TaskExtensions)
+            .GetMethod(nameof(Core.Extensions.TaskExtensions.ConvertFuncObj), BindingFlags.Static | BindingFlags.Public)!
+            .MakeGenericMethod(contextParamType!, target, returnParamType));
+        _convertFuncMethodInvoker ??= MethodInvoker.Create(typeof(Core.Extensions.TaskExtensions)
+            .GetMethod(nameof(Core.Extensions.TaskExtensions.ConvertFunc), BindingFlags.Static | BindingFlags.Public)!
+            .MakeGenericMethod(contextParamType!, returnParamType));
+
         foreach (var step in trigger.Steps)
         {
-            UseStep(builder, serviceProviderSupplier.ServiceProvider, target, contextParamType!, returnParamType!, step);
+            UseStep(builder, serviceProviderSupplier.ServiceProvider,
+                    _convertFuncMethodInvoker, _convertFuncObjMethodInvoker,
+                    target, contextParamType!, returnParamType!, step);
         }
 
         var item = builder.Build();
-        _convertFuncMethodInvoker ??= MethodInvoker.Create(typeof(Core.Extensions.TaskExtensions)
-            .GetMethod(nameof(Core.Extensions.TaskExtensions.ConvertFunc), BindingFlags.Static | BindingFlags.Public)!
-            .MakeGenericMethod(returnParamType!));
         var convertedItem = (Delegate)_convertFuncMethodInvoker.Invoke(default, [item])!;
         var resultDelegate = Delegate.CreateDelegate(target, convertedItem.Target, convertedItem.Method);
         _cachedDelegates.Add(currentDelegateKey, resultDelegate);
@@ -73,14 +79,13 @@ public class StepifiedProcessAttribute : Attribute
 
         static GenericStepifiedBuilder UseStep(
             GenericStepifiedBuilder stepifiedBuilder, IServiceProvider serviceProvider,
+            MethodInvoker methodInvoker, MethodInvoker objMethodInvoker,
             Type delegateType, Type contextType, Type returnType, Type stepType)
         {
             var stepInterface = typeof(IStep<,,>);
             var stepGenericInterface = stepInterface.MakeGenericType(delegateType, contextType, returnType);
             if (stepGenericInterface.GetTypeInfo().IsAssignableFrom(stepType.GetTypeInfo()))
             {
-                var convertFuncMethodInvoker = default(MethodInvoker);
-                var convertFuncObjMethodInvoker = default(MethodInvoker);
                 var convertFuncFinalMethodInvoker = default(MethodInvoker);
                 return stepifiedBuilder.Use(next =>
                     (Func<object, CancellationToken, Task<object>>)((object context, CancellationToken token = default) =>
@@ -88,44 +93,21 @@ public class StepifiedProcessAttribute : Attribute
                         var step = serviceProvider.GetRequiredService(stepType)
                             ?? throw new InvalidOperationException(
                                 $"Couldn't get an instance of {stepType.FullName} from the container.");
-                        var stepDelegate = GetStepDowncastedFunc(step, returnType);
-                        convertFuncObjMethodInvoker ??= MethodInvoker.Create(typeof(Core.Extensions.TaskExtensions)
-                            .GetMethod(nameof(Core.Extensions.TaskExtensions.ConvertFuncObj), BindingFlags.Static | BindingFlags.Public)!
-                            .MakeGenericMethod(returnType));
-                        var convertedItem = convertFuncObjMethodInvoker.Invoke(default, [stepDelegate]);
-                        convertFuncMethodInvoker ??= MethodInvoker.Create(typeof(Core.Extensions.TaskExtensions)
-                            .GetMethod(nameof(Core.Extensions.TaskExtensions.ConvertFunc), BindingFlags.Static | BindingFlags.Public)!
-                            .MakeGenericMethod(returnType));
-                        var nextDelConverted = (Delegate)convertFuncMethodInvoker.Invoke(default, [next])!;
+                        var methodInfo = stepType.GetMethod(InvokeAsyncMethodName);
+                        var taskType = typeof(Task<>).MakeGenericType(returnType);
+                        var fullFuncType = typeof(Func<,,,>)
+                            .MakeGenericType(contextType, delegateType, typeof(CancellationToken), taskType);
+                        var originalItem = Delegate.CreateDelegate(fullFuncType, step, methodInfo!);
+                        var convertedItem = objMethodInvoker.Invoke(default, [originalItem]);
+                        var nextDelConverted = (Delegate)methodInvoker.Invoke(default, [next])!;
                         convertFuncFinalMethodInvoker ??= MethodInvoker.Create(convertedItem!.GetType()
                             .GetMethod("Invoke", BindingFlags.Instance | BindingFlags.Public)!);
                         return (Task<object>)convertFuncFinalMethodInvoker
-                            .Invoke(convertedItem, [context, token, Delegate.CreateDelegate(delegateType, nextDelConverted.Target, nextDelConverted.Method)])!;
+                            .Invoke(convertedItem, [context, Delegate.CreateDelegate(delegateType, nextDelConverted.Target, nextDelConverted.Method), token])!;
                     }));
             }
 
             throw new InvalidOperationException($"Step should inherit IStep");
-        }
-
-        static Delegate GetStepDowncastedFunc(object step, Type returnType)
-        {
-            var stepType = step.GetType();
-            var methodInfo = stepType.GetMethod(InvokeAsyncMethodName);
-
-            var instance = Expression.Constant(step, stepType);
-            var obj = Expression.Parameter(typeof(object), ContextIdentifier);
-            var ct = Expression.Parameter(typeof(CancellationToken), CancellationTokenIdentifier);
-            var del = Expression.Parameter(typeof(Delegate), DelegateIdentifier);
-
-            var parametersInfo = methodInfo!.GetParameters();
-            var convert1 = Expression.Convert(obj, parametersInfo.First().ParameterType);
-            var convert2 = Expression.Convert(del, parametersInfo.ElementAtOrDefault(parametersInfo.Length - 2)!.ParameterType);
-
-            var call = Expression.Call(instance, methodInfo, convert1, convert2, ct);
-            var taskType = typeof(Task<>).MakeGenericType(returnType);
-            var fullFuncType = typeof(Func<,,,>)
-                .MakeGenericType(typeof(object), typeof(CancellationToken), typeof(Delegate), taskType);
-            return Expression.Lambda(fullFuncType, call, obj, ct, del).Compile();
         }
 
         static string GetKey(string targetClassName, string memberName) =>

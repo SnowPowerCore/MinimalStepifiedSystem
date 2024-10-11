@@ -28,7 +28,10 @@ public class ExampleService : IExampleService
     public async Task ExecuteAsync()
     {
         using var cts = new CancellationTokenSource();
-        var o = await Execute.Invoke(new TestContext { InitData = "Welcome!" }, cts.Token);
+        for (int i = 0; i < 1000; i++)
+        {
+            var o = await Execute.Invoke(new TestContext { InitData = "Welcome!" }, cts.Token);
+        }
     }
 
     public async Task AnotherExecuteAsync()
