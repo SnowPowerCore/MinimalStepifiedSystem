@@ -10,7 +10,7 @@ public class TestComplicatedStep(TelemetryClient telemetryClient) : IStep<TestDe
     public async Task<TestContext> InvokeAsync(TestContext context, TestDelegate next, CancellationToken token = default)
     {
         Console.WriteLine($"Stepified system continues to process");
-        await Task.Delay(3000, token);
+        //await Task.Delay(3000, token);
         telemetryClient.TrackEvent("Complicated step has been executed");
         return await next(context, token);
     }
