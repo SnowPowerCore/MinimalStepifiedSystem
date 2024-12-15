@@ -57,10 +57,10 @@ public class StepifiedProcessAttribute : Attribute
 
         using var builder = new GenericStepifiedBuilder();
 
-        _convertFuncObjMethodInvoker ??= MethodInvoker.Create(typeof(Core.Extensions.TaskExtensions)
+        _convertFuncObjMethodInvoker = MethodInvoker.Create(typeof(Core.Extensions.TaskExtensions)
             .GetMethod(nameof(Core.Extensions.TaskExtensions.ConvertFuncObj), BindingFlags.Static | BindingFlags.Public)!
             .MakeGenericMethod(contextParamType!, target, returnParamType));
-        _convertFuncMethodInvoker ??= MethodInvoker.Create(typeof(Core.Extensions.TaskExtensions)
+        _convertFuncMethodInvoker = MethodInvoker.Create(typeof(Core.Extensions.TaskExtensions)
             .GetMethod(nameof(Core.Extensions.TaskExtensions.ConvertFunc), BindingFlags.Static | BindingFlags.Public)!
             .MakeGenericMethod(contextParamType!, returnParamType));
 
