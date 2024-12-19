@@ -1,6 +1,7 @@
 ﻿using AspectInjector.Broker;
 using Microsoft.Extensions.DependencyInjection;
 using MinimalStepifiedSystem.Base;
+using MinimalStepifiedSystem.Core.Utils;
 using MinimalStepifiedSystem.Interfaces;
 using MinimalStepifiedSystem.Utils;
 using System.Diagnostics.CodeAnalysis;
@@ -39,7 +40,6 @@ public class StepifiedProcessAttribute : Attribute
     [Advice(Kind.Around, Targets = Target.Getter)]
     public object GetOrReturnCached([Argument(Source.ReturnType)] Type target,
                                     [Argument(Source.Name)] string name,
-                                    [Argument(Source.Instance)] object targetClass,
                                     [Argument(Source.Type)] Type targetClassType,
                                     [Argument(Source.Triggers)] Attribute[] triggers)
     {
@@ -49,7 +49,6 @@ public class StepifiedProcessAttribute : Attribute
             return cachedDelegate;
         }
 
-        var serviceProviderSupplier = (IServiceProviderSupplier)targetClass;
         var trigger = triggers.OfType<StepifiedProcessAttribute>().First();
         var delegateMethod = target.GetMethod(InvokeMethodName);
         var contextParamType = delegateMethod!.GetParameters().First()?.ParameterType;
@@ -66,7 +65,8 @@ public class StepifiedProcessAttribute : Attribute
 
         foreach (var step in trigger.Steps)
         {
-            UseStep(builder, serviceProviderSupplier.ServiceProvider,
+            var serviceProvider = ServiceProviderSupplier.Instance!.GetServiceProvider()!;
+            UseStep(builder, serviceProvider,
                     _convertFuncMethodInvoker, _convertFuncObjMethodInvoker,
                     target, contextParamType!, returnParamType!, step);
         }
@@ -75,6 +75,10 @@ public class StepifiedProcessAttribute : Attribute
         var convertedItem = (Delegate)_convertFuncMethodInvoker.Invoke(default, [item])!;
         var resultDelegate = Delegate.CreateDelegate(target, convertedItem.Target, convertedItem.Method);
         _cachedDelegates.Add(currentDelegateKey, resultDelegate);
+
+        _convertFuncObjMethodInvoker = default;
+        _convertFuncMethodInvoker = default;
+
         return resultDelegate;
 
         static GenericStepifiedBuilder UseStep(

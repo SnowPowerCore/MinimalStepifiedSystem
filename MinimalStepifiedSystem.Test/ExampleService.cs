@@ -22,9 +22,6 @@ public class ExampleService : IExampleService
     ])]
     protected TestDelegate AnotherExecute { get; }
 
-    [ServiceProviderSupplier]
-    public ExampleService(IServiceProvider _) { }
-
     public async Task ExecuteAsync()
     {
         using var cts = new CancellationTokenSource();
