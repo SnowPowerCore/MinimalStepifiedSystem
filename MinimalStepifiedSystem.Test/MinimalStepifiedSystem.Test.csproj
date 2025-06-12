@@ -16,4 +16,8 @@
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Analyzer Include="..\MinimalStepifiedSystem.SourceGen\bin\Debug\netstandard2.0\MinimalStepifiedSystem.SourceGen.dll" />
+  </ItemGroup>
+
 </Project>
