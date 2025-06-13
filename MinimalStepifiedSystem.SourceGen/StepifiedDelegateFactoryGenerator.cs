@@ -7,49 +7,53 @@ using System.Text;
 
 namespace MinimalStepifiedSystem.SourceGen;
 
-[Generator]
-public class StepifiedDelegateFactoryGenerator : ISourceGenerator
+[Generator(LanguageNames.CSharp)]
+public class StepifiedDelegateFactoryGenerator : IIncrementalGenerator
 {
     private const string StepifiedProcessAttribute = nameof(StepifiedProcessAttribute);
 
-    public void Initialize(GeneratorInitializationContext context) { }
-
-    public void Execute(GeneratorExecutionContext context)
+    public void Initialize(IncrementalGeneratorInitializationContext context)
     {
-        // Find all properties with [StepifiedProcess]
-        var stepifiedAttrName = StepifiedProcessAttribute;
-        var compilation = context.Compilation;
-        var allSyntaxTrees = compilation.SyntaxTrees;
-        foreach (var tree in allSyntaxTrees)
-        {
-            var semanticModel = compilation.GetSemanticModel(tree);
-            var root = tree.GetRoot();
-            var properties = root.DescendantNodes().OfType<PropertyDeclarationSyntax>();
-            foreach (var prop in properties)
-            {
-                if (semanticModel.GetDeclaredSymbol(prop) is not IPropertySymbol symbol) continue;
-                var attr = symbol.GetAttributes().FirstOrDefault(a => a.AttributeClass?.Name == stepifiedAttrName);
-                if (attr == null) continue;
+        var stepifiedProperties = context.SyntaxProvider
+            .CreateSyntaxProvider(
+                predicate: (node, _) => node is PropertyDeclarationSyntax,
+                transform: (ctx, _) =>
+                {
+                    var prop = (PropertyDeclarationSyntax)ctx.Node;
+                    var model = ctx.SemanticModel;
+                    if (model.GetDeclaredSymbol(prop) is not IPropertySymbol symbol)
+                        return null;
+                    var attr = symbol.GetAttributes().FirstOrDefault(a => a.AttributeClass?.Name == StepifiedProcessAttribute);
+                    return attr != null ? (object)new KeyValuePair<IPropertySymbol, AttributeData>(symbol, attr) : null;
+                })
+            .Where(x => x != null)
+            .Select((x, _) => (KeyValuePair<IPropertySymbol, AttributeData>)x!)
+            .Collect();
 
-                // Get delegate type
+        var compilationAndProperties = context.CompilationProvider.Combine(stepifiedProperties);
+
+        context.RegisterSourceOutput(compilationAndProperties, (spc, data) =>
+        {
+            var compilation = data.Left;
+            var items = data.Right;
+            foreach (var item in items)
+            {
+                var symbol = item.Key;
+                var attr = item.Value;
                 if (symbol.Type is not INamedTypeSymbol delegateType || delegateType.DelegateInvokeMethod == null) continue;
                 var invoke = delegateType.DelegateInvokeMethod;
-                // Must be Task<TResult>(TContext, CancellationToken)
                 if (invoke.Parameters.Length != 2) continue;
                 var contextType = invoke.Parameters[0].Type;
                 var tokenType = invoke.Parameters[1].Type;
                 var returnType = invoke.ReturnType is INamedTypeSymbol rts && rts.IsGenericType ? rts.TypeArguments[0] : null;
                 if (contextType == null || tokenType == null || returnType == null) continue;
 
-                // Get steps from attribute (handle both constructor and named argument)
                 List<INamedTypeSymbol> stepTypes = [];
-                // Constructor argument
                 if (attr.ConstructorArguments.Length > 0 && attr.ConstructorArguments[0].Values.Length > 0)
                 {
                     foreach (var v in attr.ConstructorArguments[0].Values)
                         if (v.Value is INamedTypeSymbol s) stepTypes.Add(s);
                 }
-                // Named argument (Steps = ...)
                 if (attr.NamedArguments.FirstOrDefault(kv => kv.Key == "Steps").Value.Values is { } namedSteps && !namedSteps.IsDefaultOrEmpty)
                 {
                     foreach (var v in namedSteps)
@@ -57,7 +61,6 @@ public class StepifiedDelegateFactoryGenerator : ISourceGenerator
                 }
                 if (stepTypes.Count == 0) continue;
 
-                // Generate unique factory and file name per property
                 var containingClass = symbol.ContainingType.Name;
                 var propertyName = symbol.Name;
                 var uniqueFactoryName = $"{containingClass}_{propertyName}_StepifiedFactory";
@@ -97,8 +100,8 @@ public class StepifiedDelegateFactoryGenerator : ISourceGenerator
                 sb.AppendLine("    }");
                 sb.AppendLine("}");
 
-                context.AddSource(uniqueHintName, SourceText.From(sb.ToString(), Encoding.UTF8));
+                spc.AddSource(uniqueHintName, SourceText.From(sb.ToString(), Encoding.UTF8));
             }
-        }
+        });
     }
 }
