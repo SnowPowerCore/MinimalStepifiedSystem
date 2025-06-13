@@ -1,5 +1,6 @@
 ﻿using AspectInjector.Broker;
 using MinimalStepifiedSystem.Core.Utils;
+using MinimalStepifiedSystem.Core.Extensions;
 using MinimalStepifiedSystem.Interfaces;
 using MinimalStepifiedSystem.Utils;
 using System.Diagnostics.CodeAnalysis;
@@ -26,7 +27,7 @@ public class StepifiedProcessAttribute : Attribute
 
     /// <summary>
     /// <para>• The order of types matters. They will be executed from top to bottom;</para>
-    /// <para>• There must be an <see cref="IServiceProvider"/> instance registered;</para>
+    /// <para>• There must be an <see cref="IServiceProvider"/> instance registered and a call to <see cref="HostExtensions.UseStepifiedSystem"/>;</para>
     /// <para>• You will need to implement <see cref="IStep{TDelegate, TContext, TReturn}"/> interface for each of these types with the correct signature;</para>
     /// <para>• You will need to register these types in your container.</para>
     /// </summary>
