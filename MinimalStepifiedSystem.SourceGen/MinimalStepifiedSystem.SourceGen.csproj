@@ -8,6 +8,7 @@
     <PackageOutputPath>D:\snowcore\.nuget\packages</PackageOutputPath>
     <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
     <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
+    <IsAotCompatible>true</IsAotCompatible>
   </PropertyGroup>
   
   <PropertyGroup>
