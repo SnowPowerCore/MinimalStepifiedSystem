@@ -5,12 +5,14 @@
     <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <PublishAot>true</PublishAot>
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="AspectInjector" Version="2.8.2" />
     <PackageReference Include="Microsoft.ApplicationInsights" Version="2.22.0" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.0" />
-    <PackageReference Include="MinimalStepifiedSystem.SourceGen" Version="1.0.3" />
+    <PackageReference Include="MinimalStepifiedSystem.SourceGen" Version="1.0.42" />
   </ItemGroup>
 
   <ItemGroup>

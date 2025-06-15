@@ -3,15 +3,15 @@ using MinimalStepifiedSystem.Core.Utils;
 using MinimalStepifiedSystem.Core.Extensions;
 using MinimalStepifiedSystem.Interfaces;
 using MinimalStepifiedSystem.Utils;
-using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
+using System;
 
 namespace MinimalStepifiedSystem.Attributes;
 
 [Aspect(Scope.Global)]
 [Injection(typeof(StepifiedProcessAttribute))]
 [AttributeUsage(AttributeTargets.Property, AllowMultiple = false)]
-public class StepifiedProcessAttribute : Attribute
+public partial class StepifiedProcessAttribute : Attribute
 {
     private const string FactoryMethodName = "Create";
 
@@ -31,7 +31,6 @@ public class StepifiedProcessAttribute : Attribute
     /// <para>• You will need to implement <see cref="IStep{TDelegate, TContext, TReturn}"/> interface for each of these types with the correct signature;</para>
     /// <para>• You will need to register these types in your container.</para>
     /// </summary>
-    [NotNull]
     public Type[] Steps { get; set; } = [];
 
     [Advice(Kind.Around, Targets = Target.Getter)]
