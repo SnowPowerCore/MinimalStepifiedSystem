@@ -12,7 +12,11 @@ public class DictionaryWithDefault<TKey, TValue> : Dictionary<TKey, TValue> wher
     public DictionaryWithDefault(TValue defaultValue) =>
         DefaultValue = defaultValue;
 
-    public new TValue this[TKey key]
+    public new TValue this[
+#if NET8_0_OR_GREATER
+        [System.Diagnostics.CodeAnalysis.NotNull]
+#endif
+        TKey key]
     {
         get => TryGetValue(key!, out var t) ? t : DefaultValue;
         set => base[key!] = value;

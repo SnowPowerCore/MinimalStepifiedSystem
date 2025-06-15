@@ -11,7 +11,7 @@ namespace MinimalStepifiedSystem.Attributes;
 [Aspect(Scope.Global)]
 [Injection(typeof(StepifiedProcessAttribute))]
 [AttributeUsage(AttributeTargets.Property, AllowMultiple = false)]
-public partial class StepifiedProcessAttribute : Attribute
+public class StepifiedProcessAttribute : Attribute
 {
     private const string FactoryMethodName = "Create";
 
@@ -31,6 +31,9 @@ public partial class StepifiedProcessAttribute : Attribute
     /// <para>• You will need to implement <see cref="IStep{TDelegate, TContext, TReturn}"/> interface for each of these types with the correct signature;</para>
     /// <para>• You will need to register these types in your container.</para>
     /// </summary>
+#if NET8_0_OR_GREATER
+        [System.Diagnostics.CodeAnalysis.NotNull]
+#endif
     public Type[] Steps { get; set; } = [];
 
     [Advice(Kind.Around, Targets = Target.Getter)]
