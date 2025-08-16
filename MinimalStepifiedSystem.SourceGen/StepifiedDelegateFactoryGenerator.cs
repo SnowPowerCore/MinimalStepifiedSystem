@@ -96,7 +96,7 @@ public class StepifiedDelegateFactoryGenerator : IIncrementalGenerator
                 for (int i = stepTypeNames.Count - 1; i >= 0; i--)
                 {
                     var next = (i == stepTypeNames.Count - 1)
-                        ? $"({contextTypeName} c, CancellationToken t) => {{\n    if (t != CancellationToken.None && t.IsCancellationRequested)\n    {{\n        Console.WriteLine(\"Operation was cancelled for the {contextTypeName}. Please check steps which operate this context.\");\n        return Task.FromCanceled<{returnTypeName}>(t);\n    }}\n    return Task.FromResult(({returnTypeName})c);\n}}"
+                        ? $"({contextTypeName} c, CancellationToken t) => {{\n    if (t != CancellationToken.None && t.IsCancellationRequested)\n    {{\n        System.Console.WriteLine(\"Operation was cancelled for the {contextTypeName}. Please check steps which operate this context.\");\n        return Task.FromCanceled<{returnTypeName}>(t);\n    }}\n    return Task.FromResult(System.Convert.ChangeType(c, typeof({returnTypeName})));\n}}"
                         : $"async ({contextTypeName} c, CancellationToken t) => await step{i + 2}.InvokeAsync(c, next{i + 2}, t)";
                     sb.AppendLine($"                {nextDelegateType} next{i + 1} = {next};");
                 }
