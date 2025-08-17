@@ -51,7 +51,7 @@ public class StepifiedProcessAttribute : Attribute
         var factoryTypeName = $"{target.Namespace}.{targetClassType.Name}_{name}_StepifiedFactory, {targetClassType.Assembly.FullName}";
         if (!_factoryDelegates.TryGetValue(factoryTypeName, out var factoryDelegate))
         {
-            var factoryType = Type.GetType(factoryTypeName, throwOnError: true)!;
+            var factoryType = targetClassType.Assembly.GetType(factoryTypeName, throwOnError: true)!;
             var createMethod = factoryType.GetMethod(FactoryMethodName, BindingFlags.Public | BindingFlags.Static)!;
             // The generated Create method always has signature: static {DelegateType} Create(IServiceProvider)
             factoryDelegate = (Func<IServiceProvider, Delegate>)Delegate.CreateDelegate(typeof(Func<IServiceProvider, Delegate>), createMethod);
