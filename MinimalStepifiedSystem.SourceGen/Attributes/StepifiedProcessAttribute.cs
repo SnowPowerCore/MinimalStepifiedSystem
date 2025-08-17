@@ -48,7 +48,7 @@ public class StepifiedProcessAttribute : Attribute
         }
 
         // Use the generated factory by convention: {ContainingClass}_{PropertyName}_StepifiedFactory.Create(IServiceProvider)
-        var factoryTypeName = $"{target.Namespace}.{targetClassType.Name}_{name}_StepifiedFactory, {target.Assembly.FullName}";
+        var factoryTypeName = $"{target.Namespace}.{targetClassType.Name}_{name}_StepifiedFactory, {targetClassType.Assembly.FullName}";
         if (!_factoryDelegates.TryGetValue(factoryTypeName, out var factoryDelegate))
         {
             var factoryType = Type.GetType(factoryTypeName, throwOnError: true)!;
