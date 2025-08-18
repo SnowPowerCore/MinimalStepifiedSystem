@@ -1,7 +1,7 @@
 ﻿using Microsoft.ApplicationInsights;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using MinimalStepifiedSystem.Core.Extensions;
+using MinimalStepifiedSystem.Extensions;
 using MinimalStepifiedSystem.Test;
 using MinimalStepifiedSystem.Test.Interfaces;
 using MinimalStepifiedSystem.Test.Steps;

@@ -1,10 +1,7 @@
 ﻿using AspectInjector.Broker;
-using MinimalStepifiedSystem.Core.Utils;
-using MinimalStepifiedSystem.Core.Extensions;
 using MinimalStepifiedSystem.Interfaces;
 using MinimalStepifiedSystem.Utils;
 using System.Reflection;
-using System;
 
 namespace MinimalStepifiedSystem.Attributes;
 
@@ -48,7 +45,7 @@ public class StepifiedProcessAttribute : Attribute
         }
 
         // Use the generated factory by convention: {ContainingClass}_{PropertyName}_StepifiedFactory.Create(IServiceProvider)
-        var factoryTypeName = $"{target.Namespace}.{targetClassType.Name}_{name}_StepifiedFactory, {targetClassType.Assembly.FullName}";
+        var factoryTypeName = $"{target.Namespace}.{targetClassType.Name}_{name}_StepifiedFactory";
         if (!_factoryDelegates.TryGetValue(factoryTypeName, out var factoryDelegate))
         {
             var factoryType = targetClassType.Assembly.GetType(factoryTypeName, throwOnError: true)!;
@@ -57,12 +54,12 @@ public class StepifiedProcessAttribute : Attribute
             factoryDelegate = (Func<IServiceProvider, Delegate>)Delegate.CreateDelegate(typeof(Func<IServiceProvider, Delegate>), createMethod);
             _factoryDelegates[factoryTypeName] = factoryDelegate;
         }
-        var serviceProvider = ServiceProviderSupplier.Instance!.GetServiceProvider()!;
+        var serviceProvider = ServiceProviderSupplier.Instance!.CreateScope().ServiceProvider!;
         var resultDelegate = factoryDelegate(serviceProvider);
         _cachedDelegates.Add(currentDelegateKey, resultDelegate);
         return resultDelegate!;
     }
 
-    static string GetKey(string targetClassName, string memberName) =>
+    private static string GetKey(string targetClassName, string memberName) =>
         $"{targetClassName}.{memberName}";
 }

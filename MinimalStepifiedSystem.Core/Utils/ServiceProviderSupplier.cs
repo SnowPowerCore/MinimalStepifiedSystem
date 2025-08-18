@@ -1,38 +1,37 @@
 using Microsoft.Extensions.DependencyInjection;
 
-namespace MinimalStepifiedSystem.Core.Utils;
+namespace MinimalStepifiedSystem.Utils;
 
 public class ServiceProviderSupplier
 {
-    private const string GlobalScopeMessage = "Setting the global service scope factory.";
+    private static readonly Lazy<ServiceProviderSupplier> _instance =
+        new(() => new ServiceProviderSupplier());
 
-    private static readonly Lazy<ServiceProviderSupplier> _instance = new(() => new ServiceProviderSupplier());
-    private IServiceProvider? _serviceProvider;
-    private IServiceScopeFactory? _serviceScopeFactory;
+    private IServiceScopeFactory? _scopeFactory;
 
     public static ServiceProviderSupplier Instance => _instance.Value;
 
     private ServiceProviderSupplier() { }
 
+    /// <summary>
+    /// Safe to call on app restarts.
+    /// </summary>
     public void Setup(IServiceProvider serviceProvider)
     {
-        if (serviceProvider is default(IServiceProvider))
-            return;
+        if (serviceProvider == null)
+            throw new ArgumentNullException(nameof(serviceProvider));
 
-        _serviceScopeFactory = serviceProvider.GetRequiredService<IServiceScopeFactory>();
-
-        if (_serviceProvider is default(IServiceProvider))
-        {
-            SetServiceProvider(_serviceScopeFactory!);
-            return;
-        }
+        _scopeFactory = serviceProvider.GetRequiredService<IServiceScopeFactory>();
     }
 
-    public IServiceProvider? GetServiceProvider() => _serviceProvider;
-
-    private void SetServiceProvider(IServiceScopeFactory serviceScopeFactory)
+    /// <summary>
+    /// Creates a fresh scope for isolated, short-lived resolutions.
+    /// </summary>
+    public IServiceScope CreateScope()
     {
-        Console.WriteLine(GlobalScopeMessage);
-        _serviceProvider = serviceScopeFactory.CreateScope().ServiceProvider;
+        if (_scopeFactory == null)
+            throw new InvalidOperationException("ServiceProviderSupplier not initialized. Call Setup() first.");
+
+        return _scopeFactory.CreateScope();
     }
 }

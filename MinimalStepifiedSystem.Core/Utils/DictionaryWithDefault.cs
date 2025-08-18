@@ -8,9 +8,7 @@ public class DictionaryWithDefault<TKey, TValue> : Dictionary<TKey, TValue> wher
     public DictionaryWithDefault() { }
 #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
 
-
-    public DictionaryWithDefault(TValue defaultValue) =>
-        DefaultValue = defaultValue;
+    public DictionaryWithDefault(TValue defaultValue) => DefaultValue = defaultValue;
 
     public new TValue this[
 #if NET8_0_OR_GREATER

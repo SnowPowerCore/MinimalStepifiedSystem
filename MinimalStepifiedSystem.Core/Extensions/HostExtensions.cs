@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Hosting;
-using MinimalStepifiedSystem.Core.Utils;
+using MinimalStepifiedSystem.Utils;
 
-namespace MinimalStepifiedSystem.Core.Extensions;
+namespace MinimalStepifiedSystem.Extensions;
 
 public static class HostExtensions
 {
